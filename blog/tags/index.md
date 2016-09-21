@@ -3,7 +3,7 @@ title: Tags
 layout: subpage
 ---
 
-# Data Analysis Visually EnfoRced
+# {{ site.blogtitle }}
 
 ### Tags
 

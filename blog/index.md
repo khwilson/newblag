@@ -3,7 +3,7 @@ title: Blog
 layout: page
 ---
 
-# Data Analysis Visually EnfoRced
+# {{ site.blogtitle }}
 
 <div id="posts">
 
