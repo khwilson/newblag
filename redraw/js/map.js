@@ -15,34 +15,50 @@ var getParameterByName = function (name, url) {
 
 /* Splits based on 2012 vs 2016 data */
 
+var year = null,
+    loser = null,
+    dataFile = null,
+    data = {},
+    partyToCandidate = null;
+
+var setYear = function(newYear) {
+  if (newYear === '2012') {
+    year = 2012;
+    dataFile = 'data/us2012.json';
+    partyToCandidate = {
+      'dem': 'Barack Obama',
+      'gop': 'Mitt Romney',
+      'grn': "Green Party",
+      'lib': 'Gary Johnson',
+      'una': 'Unaffiliated',
+      'oth': 'Other'
+    }
+    loser = 'Mitt Romney';
+  } else {
+    year = 2016;
+    dataFile = 'data/us.json';
+    partyToCandidate = {
+      'dem': 'Hillary Clinton',
+      'gop': 'Donald Trump',
+      'grn': "Jill Stein",
+      'lib': 'Gary Johnson',
+      'una': 'Evan McMullin',
+      'oth': 'Other'
+    }
+    loser = 'Hillary Clinton';
+  }
+}
+
 if (getParameterByName('year') === '2012') {
-  var year = 2012;
-  var dataFile = 'data/us2012.json';
-  var partyToCandidate = {
-    'dem': 'Barack Obama',
-    'gop': 'Mitt Romney',
-    'grn': "Green Party",
-    'lib': 'Gary Johnson',
-    'una': 'Unaffiliated',
-    'oth': 'Other'
-  }
+  setYear('2012');
 } else {
-  var year = 2016;
-  var dataFile = 'data/us.json';
-  var partyToCandidate = {
-    'dem': 'Hillary Clinton',
-    'gop': 'Donald Trump',
-    'grn': "Jill Stein",
-    'lib': 'Gary Johnson',
-    'una': 'Evan McMullin',
-    'oth': 'Other'
-  }
+  setYear('2016');
 }
 
 var numberToLetter = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 var letterToNumber = {};
-for (let i=0; i<numberToLetter.length; ++i) {
+for (var i=0; i<numberToLetter.length; ++i) {
   letterToNumber[numberToLetter[i]] = i;
 }
 var countyToState = {}
@@ -57,9 +73,11 @@ var STATE_ABBREVS = [
   'WY'];
 
 var stateToNumber = {};
-for (let i=0; i<STATE_ABBREVS.length; ++i) {
+for (var i=0; i<STATE_ABBREVS.length; ++i) {
   stateToNumber[STATE_ABBREVS[i]] = i;
 }
+
+var tableHeaders = ['population', 'electors', 'dem', 'gop', 'lib', 'grn', 'una', 'oth'];
 
 
 /* Global state variables */
@@ -135,11 +153,13 @@ var svg = d3.select("#states-svg")
  * @updates stateTotals
  */
 var computeElectors = function() {
-  let priorities = [];
-  let allocated = 153;
-  for (let state of STATE_ABBREVS) {
+  var priorities = [];
+  var allocated = 153;
+  for (var state of STATE_ABBREVS) {
     stateTotals[state].electors = 3;
-    if (state !== 'DC' && state !== 'AK') {
+    if (state !== 'DC') {
+      // DC doesn't get any more electors than the least populous state,
+      // which for the lifespan of this tool we can safely assume to be 3.
       priorities.push({key: state, val: stateTotals[state].population / Math.sqrt(2)});
     }
   }
@@ -150,8 +170,8 @@ var computeElectors = function() {
     return a.val < b.val ? 1 : -1;
   });
   while (allocated < 538) {
-    let nextUp = priorities[0];
-    let nextState = stateTotals[nextUp.key];
+    var nextUp = priorities[0];
+    var nextState = stateTotals[nextUp.key];
     nextState.electors += 1;
     allocated += 1;
     nextUp.val = nextState.population / Math.sqrt((nextState.electors - 2) * (nextState.electors - 1));
@@ -182,15 +202,15 @@ var intWithCommas = function(d) {
 
 var getColorClass = function(d) {
   if (d.properties.hasOwnProperty('state')) {
-    let s = stateTotals[d.properties.state];
+    var s = stateTotals[d.properties.state];
     if (s.dem > s.gop) {
-      let demPercent = Math.floor(d.properties.dem / (d.properties.gop + d.properties.dem) * 20) * 5;
+      var demPercent = Math.floor(d.properties.dem / (d.properties.gop + d.properties.dem) * 20) * 5;
       if (demPercent < 50) {
         demPercent = 'less-than-50';
       }
       return 'dem-' + demPercent;
     } else {
-      let demPercent = Math.floor(d.properties.dem / (d.properties.gop + d.properties.dem) * 20) * 5;
+      var demPercent = Math.floor(d.properties.dem / (d.properties.gop + d.properties.dem) * 20) * 5;
       if (demPercent >= 50) {
         demPercent = 'greater-than-50';
       }
@@ -216,7 +236,7 @@ var update = function() {
   tr.enter().append("tr");
   var td = tr.selectAll("td")
     .data(function (d, i) {
-      let state = stateTotals[STATE_ABBREVS[i]];
+      var state = stateTotals[STATE_ABBREVS[i]];
       return [STATE_ABBREVS[i], state.population, state.electors,
               state.dem, state.gop, state.grn, state.lib, state.una, state.oth];
     });
@@ -236,7 +256,7 @@ var update = function() {
   tr.exit().remove();
 
   /* Draw United States with colors! */
-  let mapPath;
+  var mapPath;
 
   if (countyMode === 'show') {
     // We do a full, county level rendering
@@ -249,7 +269,7 @@ var update = function() {
       .on("click", function(d) {
         if (currentMode === 'pickup') {
           // Select or deselect the county
-          let me = d3.select(this);
+          var me = d3.select(this);
           if (me.classed('selection-color')) {
             me.classed(getColorClass(d), true);
             me.classed("selection-color", false);
@@ -259,14 +279,15 @@ var update = function() {
           }
         } else if (currentMode === 'dropoff') {
           // Move the counties into their new state
-          let newState = d.properties.state;
-          let newStateData = stateTotals[newState];
+          var newState = d.properties.state;
+          var newStateData = stateTotals[newState];
           d3.selectAll("path.selection-color")
             .each(function(dd) {
-              let oldState = dd.properties.state;
+              var oldState = dd.properties.state;
               dd.properties.state = newState;
-              let oldStateData = stateTotals[oldState];
-              for (let key of ['population', 'electors', 'dem', 'gop', 'lib', 'grn', 'una', 'oth']) {
+              var oldStateData = stateTotals[oldState];
+              for (var i=0; i<tableHeaders.length; ++i) {
+                var key = tableHeaders[i];
                 newStateData[key] += hasOrZero(dd.properties, key);
                 oldStateData[key] -= hasOrZero(dd.properties, key);
               }
@@ -286,22 +307,22 @@ var update = function() {
       })
       .on('mouseover', function(d) {
         // Initialize the county level detail
-        let theHeading = tooltipTitle.selectAll("h2").data([d.properties.name])
+        var theHeading = tooltipTitle.selectAll("h2").data([d.properties.name])
         theHeading.enter().append("h2").attr('class', 'tooltip-title-heading');
         theHeading.html(function(dd) { return dd; });
         let thisData = [];
         let total = 0;
-        for (let party in partyToCandidate) {
-          let partyTotal = hasOrZero(d.properties, party);
+        for (var party in partyToCandidate) {
+          var partyTotal = hasOrZero(d.properties, party);
           if (partyTotal > 0) {
             thisData.push([partyToCandidate[party], partyTotal]);
             total += partyTotal;
           }
         }
-        let theData = tooltipTbody.selectAll("tr")
+        var theData = tooltipTbody.selectAll("tr")
           .data(thisData);
         theData.enter().append('tr')
-        let theRow = theData.selectAll("td").data(function(dd, i) {
+        var theRow = theData.selectAll("td").data(function(dd, i) {
           return [dd[0], dd[1], (100 * dd[1] / total).toFixed(2) + '%'];
         });
         theRow.enter().append('td');
@@ -332,10 +353,10 @@ var update = function() {
     // If we're hiding the counties, we want to color whole states
     mapPath.attr('class', function (d) {
       if (stateTotals.hasOwnProperty(d.key)) {
-        let s = stateTotals[d.key];
-        let dem = hasOrZero(s, 'dem');
-        let gop = hasOrZero(s, 'gop');
-        let demPercent = Math.floor(dem / (dem + gop) * 20) * 5;
+        var s = stateTotals[d.key];
+        var dem = hasOrZero(s, 'dem');
+        var gop = hasOrZero(s, 'gop');
+        var demPercent = Math.floor(dem / (dem + gop) * 20) * 5;
         return "state-boundary dem-" + demPercent + '-state';
       } else {
         return 'state-boundary';
@@ -344,12 +365,13 @@ var update = function() {
   }
 
   // Recompute the total number of electoral votes
-  let demTotal = 0;
-  let gopTotal = 0;
-  let count = 0;
-  for (let state of STATE_ABBREVS) {
+  var demTotal = 0;
+  var gopTotal = 0;
+  var count = 0;
+  for (var i=0; i<STATE_ABBREVS.length; ++i) {
+    var state = STATE_ABBREVS[i];
     count += 1;
-    let s = stateTotals[state];
+    var s = stateTotals[state];
     if (s.dem > s.gop) {
       demTotal += s.electors;
     } else {
@@ -364,11 +386,25 @@ var update = function() {
 }
 
 /* Read data once! */
-d3.json(dataFile, function(error, usData) {
-  if (error) throw error;
-  us = usData;
+var reset = function(dataFile) {
+  if (dataFile in data) {
+    execReset(data[dataFile]);
+  } else {
+    d3.json(dataFile, function(error, usData) {
+      if (error) throw error;
+      data[dataFile] = usData;
+      execReset(usData);
+    });
+  }
+}
 
-  let shareParameter = getParameterByName('share');
+var execReset = function(usData) {
+  us = usData;
+  stateTotals = {};
+  d3.selectAll('path').remove();
+  $("#lede").html("How few counties can you move to make " + loser + " win the " + year + " election?");
+
+  var shareParameter = getParameterByName('share');
   if (shareParameter) {
     us.objects.counties.geometries.sort(function(x, y) {
       if (x.id < y.id) {
@@ -379,9 +415,9 @@ d3.json(dataFile, function(error, usData) {
         return 0;
       }
     });
-    for (let i=0; i<shareParameter.length; ++i) {
-      let num = letterToNumber[shareParameter[i]];
-      let geom = us.objects.counties.geometries[i];
+    for (var i=0; i<shareParameter.length; ++i) {
+      var num = letterToNumber[shareParameter[i]];
+      var geom = us.objects.counties.geometries[i];
       if (!geom) {
         console.log("problem ", i);
       }
@@ -391,14 +427,14 @@ d3.json(dataFile, function(error, usData) {
     }
   }
 
-  for (let i=0; i<us.objects.counties.geometries.length; ++i) {
-    let county = us.objects.counties.geometries[i];
+  for (var i=0; i<us.objects.counties.geometries.length; ++i) {
+    var county = us.objects.counties.geometries[i];
     if (!county.hasOwnProperty('properties') || !county.properties.hasOwnProperty("state")) {
       // There are a few numbers in the 72000s which appear to be part of nothing in particular.
       continue;
     }
     countyToState[county.id] = county.properties.state;
-    let state;
+    var state;
     if (stateTotals.hasOwnProperty(county.properties.state)) {
       state = stateTotals[county.properties.state];
     } else {
@@ -415,8 +451,9 @@ d3.json(dataFile, function(error, usData) {
   }
 
   update();
+}
 
-});
+reset(dataFile);
 
 
 /**** Sharing ****/
@@ -433,14 +470,15 @@ var getShareUrl = function() {
     }
   });
   shareUrl = [];
-  for (let geom of us.objects.counties.geometries) {
+  for (var i=0; i<us.objects.counties.geometries.length; ++i) {
+    var geom = us.objects.counties.geometries[i];
     if (geom.hasOwnProperty('properties')) {
       shareUrl.push(numberToLetter[stateToNumber[geom.properties.state]]);
     } else {
       shareUrl.push(numberToLetter[51]);
     }
   }
-  let baseUrl = window.location.origin + window.location.pathname + '?';
+  var baseUrl = window.location.origin + window.location.pathname + '?';
   if (year !== 2016) {
     baseUrl += 'year=' + year + '&';
   }
@@ -469,4 +507,13 @@ clipboard.on('success', function(e) {
   console.info('Action:', e.action);
   console.info('Text:', e.text);
   console.info('Trigger:', e.trigger);
+});
+
+$("#selectYear").change(function() {
+  var newYear = null;
+  $("#selectYear>option:selected").each(function() {
+    newYear = this.value;
+  });
+  setYear(newYear);
+  reset(dataFile);
 });
