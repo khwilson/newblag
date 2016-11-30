@@ -154,9 +154,18 @@ var svg = d3.select("#states-svg")
  */
 var computeElectors = function() {
   var priorities = [];
-  var allocated = 153;
+  var allocated = 0;
+  var maxElectors = 538;
   for (var state of STATE_ABBREVS) {
-    stateTotals[state].electors = 3;
+	  if (stateTotals[state].population > 0) {
+	  	stateTotals[state].electors = 3;
+	  } else {
+	  	stateTotals[state].electors = 0;
+	  	(state !== 'DC') ? maxElectors -= 2 : maxElectors -= 3;
+	  	// If a state does not exist, then neither does it have any senators.
+	  	// For DC, must also subtract the phantom "representative".
+	  }
+	  allocated += stateTotals[state].electors;
     if (state !== 'DC') {
       // DC doesn't get any more electors than the least populous state,
       // which for the lifespan of this tool we can safely assume to be 3.
@@ -169,7 +178,7 @@ var computeElectors = function() {
     }
     return a.val < b.val ? 1 : -1;
   });
-  while (allocated < 538) {
+  while (allocated < maxElectors) {
     var nextUp = priorities[0];
     var nextState = stateTotals[nextUp.key];
     nextState.electors += 1;
@@ -367,11 +376,11 @@ var update = function() {
   // Recompute the total number of electoral votes
   var demTotal = 0;
   var gopTotal = 0;
-  var count = 0;
+  var totalElectors = 0;
   for (var i=0; i<STATE_ABBREVS.length; ++i) {
     var state = STATE_ABBREVS[i];
-    count += 1;
     var s = stateTotals[state];
+    totalElectors += s.electors;
     if (s.dem > s.gop) {
       demTotal += s.electors;
     } else {
@@ -380,7 +389,7 @@ var update = function() {
   }
 
   // Color and fill in EV bar
-  d3.select('.ev-bar').attr('style', 'background: linear-gradient(to right, #179ee0 0%, #179ee0 ' + (demTotal / 538 * 100) + '%, #ff5d40 ' + (demTotal / 538 * 100) + '%, #ff5d40 100%)');
+  d3.select('.ev-bar').attr('style', 'background: linear-gradient(to right, #179ee0 0%, #179ee0 ' + (demTotal / totalElectors * 100) + '%, #ff5d40 ' + (demTotal / totalElectors * 100) + '%, #ff5d40 100%)');
   $(".ev-bar-dem-total").text(demTotal);
   $(".ev-bar-gop-total").text(gopTotal);
 }
